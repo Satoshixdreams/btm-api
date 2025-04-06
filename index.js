@@ -51,6 +51,12 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
+// Add a catch-all route to log attempted access to undefined routes
+app.use((req, res) => {
+  console.log(`Attempted to access undefined route: ${req.method} ${req.path}`);
+  res.status(404).json({ error: 'Not Found', path: req.path });
+});
+
 // Add your other API endpoints here
 
 // Start server
