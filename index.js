@@ -43,11 +43,13 @@ async function testConnection() {
 
 // API Routes
 app.get('/', (req, res) => {
+  console.log('Root endpoint accessed');
   res.json({ message: 'BTM API is running' });
 });
 
 // Health check endpoint
 app.get('/health', (req, res) => {
+  console.log('Health endpoint accessed');
   res.json({ status: 'ok' });
 });
 
@@ -57,11 +59,19 @@ app.use((req, res) => {
   res.status(404).json({ error: 'Not Found', path: req.path });
 });
 
-// Add your other API endpoints here
-
 // Start server
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, async () => {
+const server = app.listen(PORT, async () => {
   console.log(`API running on port ${PORT}`);
+  console.log(`Server is listening at http://localhost:${PORT}`);
   await testConnection();
+});
+
+// Handle graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
 });
