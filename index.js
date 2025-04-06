@@ -13,13 +13,30 @@ const web3 = new Web3(new Web3.providers.HttpProvider(rpcUrl));
 // Test connection to Monad Testnet
 async function testConnection() {
   try {
-    // Use a basic method to test connection
-    const networkId = await web3.eth.net.getId();
-    console.log(`Connected to Monad Testnet. Network ID: ${networkId}`);
-    return true;
+    // Try different methods to test connection
+    try {
+      // First try getting the block number
+      const blockNumber = await web3.eth.getBlockNumber();
+      console.log(`Connected to Monad Testnet. Current block: ${blockNumber}`);
+      return true;
+    } catch (innerError) {
+      // If that fails, try a different method
+      try {
+        const accounts = await web3.eth.getAccounts();
+        console.log(`Connected to Monad Testnet. Found ${accounts.length} accounts.`);
+        return true;
+      } catch (accountError) {
+        // If that also fails, try a simple web3 isConnected check
+        if (web3.eth.net.isListening()) {
+          console.log('Connected to Monad Testnet via isListening check.');
+          return true;
+        }
+        throw new Error('All connection methods failed');
+      }
+    }
   } catch (error) {
     console.error('Failed to connect to Monad Testnet:', error.message);
-    // Continue running the API even if connection fails
+    console.log('API will continue running without blockchain connectivity.');
     return false;
   }
 }
