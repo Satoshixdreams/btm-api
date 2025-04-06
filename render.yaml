@@ -1,0 +1,11 @@
+# Exported from Render on 2025-04-06T20:06:20Z
+services:
+- type: web
+  name: btm-api
+  runtime: rust
+  repo: https://github.com/Satoshixdreams/btm-api
+  plan: free
+  region: oregon
+  buildCommand: cargo build --release
+  startCommand: .
+version: "1"
