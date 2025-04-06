@@ -8,4 +8,17 @@ services:
   region: oregon
   buildCommand: cargo build --release
   startCommand: .
+- type: web
+  name: btm-api
+  env: node
+  buildCommand: npm install
+  startCommand: npm start
+  envVars:
+    - key: RPC_URL
+      value: https://testnet-rpc.monad.xyz
+    - key: PORT
+      fromService:
+        type: web
+        name: btm-api
+        envVarKey: PORT
 version: "1"
