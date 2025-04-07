@@ -1,323 +1,147 @@
+require('dotenv').config();
 const express = require('express');
-const Web3 = require('web3');
-require('dotenv').config(); // لإدارة المتغيرات البيئية
-
 const app = express();
+const contractUtils = require('./utils/contract');
 
-// عنوان RPC لـ Monad Testnet (يُؤخذ من متغير بيئي أو يُستخدم الافتراضي)
-const rpcUrl = process.env.RPC_URL || 'https://testnet-rpc.monad.xyz';
-const web3 = new Web3(rpcUrl);
+// Middleware
+app.use(express.json());
 
-// عنوان عقد BTM
-const contractAddress = '0x59d6d0ADB836Ed25a3E7921ded05BF1997E82b8d';
-
-// ABI الخاص بالعقد
-const abi = [
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "initialSupply",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "nonpayable",
-    "type": "constructor"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "owner",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "spender",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "value",
-        "type": "uint256"
-      }
-    ],
-    "name": "Approval",
-    "type": "event"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "spender",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "value",
-        "type": "uint256"
-      }
-    ],
-    "name": "approve",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "success",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "to",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "value",
-        "type": "uint256"
-      }
-    ],
-    "name": "transfer",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "success",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "from",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "to",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "value",
-        "type": "uint256"
-      }
-    ],
-    "name": "Transfer",
-    "type": "event"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "from",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "to",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "value",
-        "type": "uint256"
-      }
-    ],
-    "name": "transferFrom",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "success",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "name": "allowance",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "name": "balanceOf",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "decimals",
-    "outputs": [
-      {
-        "internalType": "uint8",
-        "name": "",
-        "type": "uint8"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "name",
-    "outputs": [
-      {
-        "internalType": "string",
-        "name": "",
-        "type": "string"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "owner",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "symbol",
-    "outputs": [
-      {
-        "internalType": "string",
-        "name": "",
-        "type": "string"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "totalSupply",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  }
-];
-
-// إنشاء كائن العقد
-const contract = new web3.eth.Contract(abi, contractAddress);
-
-// التحقق من الاتصال بشبكة Monad
-web3.eth.net.isListening()
-  .then(() => console.log('Connected to Monad Testnet'))
-  .catch(err => console.error('Failed to connect to Monad Testnet:', err));
-
-// نقطة نهاية للتحقق من الصحة
-app.get('/health', (req, res) => {
-  res.json({ status: 'API is running' });
-});
-
-// نقطة نهاية للحصول على الرصيد
-app.get('/balance/:address', async (req, res) => {
+// Test connection to Monad Testnet
+async function testConnection() {
   try {
-    const address = req.params.address;
-    if (!web3.utils.isAddress(address)) {
-      return res.status(400).json({ error: 'Invalid Ethereum address' });
+    // Try different methods to test connection
+    try {
+      // First try getting the block number
+      const blockNumber = await contractUtils.web3.eth.getBlockNumber();
+      console.log(`Connected to Monad Testnet. Current block: ${blockNumber}`);
+      return true;
+    } catch (innerError) {
+      // If that fails, try a different method
+      try {
+        const accounts = await contractUtils.web3.eth.getAccounts();
+        console.log(`Connected to Monad Testnet. Found ${accounts.length} accounts.`);
+        return true;
+      } catch (accountError) {
+        // If that also fails, try a simple web3 isConnected check
+        if (contractUtils.web3.eth.net.isListening()) {
+          console.log('Connected to Monad Testnet via isListening check.');
+          return true;
+        }
+        throw new Error('All connection methods failed');
+      }
     }
-    const balance = await contract.methods.balanceOf(address).call();
-    res.json({ balance: balance / 10**18 });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Failed to connect to Monad Testnet:', error.message);
+    console.log('API will continue running without blockchain connectivity.');
+    return false;
   }
+}
+
+// API Routes
+app.get('/', (req, res) => {
+  console.log('Root endpoint accessed');
+  res.json({ message: 'BTM API is running' });
 });
 
-// نقطة نهاية للحصول على اسم العملة
-app.get('/name', async (req, res) => {
+// Health check endpoint
+app.get('/health', (req, res) => {
+  console.log('Health endpoint accessed');
+  res.json({ status: 'ok' });
+});
+
+// Add BTM token info endpoint
+app.get('/token-info', async (req, res) => {
   try {
-    const name = await contract.methods.name().call();
-    res.json({ name });
+    // Get token info from blockchain
+    const [name, symbol, decimals, totalSupply] = await Promise.all([
+      contractUtils.getTokenName(),
+      contractUtils.getTokenSymbol(),
+      contractUtils.getTokenDecimals(),
+      contractUtils.getTokenTotalSupply()
+    ]);
+    
+    const tokenInfo = {
+      name,
+      symbol,
+      type: "ERC20",
+      contractAddress: "0x59d6d0ADB836Ed25a3E7921ded05BF1997E82b8d",
+      decimals,
+      totalSupply
+    };
+    res.json(tokenInfo);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// نقطة نهاية للحصول على رمز العملة
+// Add symbol endpoint
 app.get('/symbol', async (req, res) => {
+  console.log('Symbol endpoint accessed');
   try {
-    const symbol = await contract.methods.symbol().call();
+    const symbol = await contractUtils.getTokenSymbol();
     res.json({ symbol });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// نقطة نهاية للحصول على إجمالي المعروض
+// Add totalSupply endpoint
 app.get('/totalSupply', async (req, res) => {
+  console.log('Total supply endpoint accessed');
   try {
-    const totalSupply = await contract.methods.totalSupply().call();
-    res.json({ totalSupply: totalSupply / 10**18 });
+    const totalSupply = await contractUtils.getTokenTotalSupply();
+    res.json({ totalSupply });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// تشغيل الخادوم
-const port = process.env.PORT || 3001;
-app.listen(port, '0.0.0.0', () => console.log(`API running on port ${port}`));
+// Add balance endpoint
+app.get('/balance', async (req, res) => {
+  console.log('Balance endpoint accessed');
+  try {
+    // Get address from query parameter
+    const address = req.query.address;
+    
+    if (!address) {
+      return res.status(400).json({ error: "Address parameter is required" });
+    }
+    
+    const balance = await contractUtils.getTokenBalance(address);
+    const decimals = await contractUtils.getTokenDecimals();
+    
+    // Format the balance with decimals
+    const formattedBalance = contractUtils.web3.utils.fromWei(balance, 'ether');
+    
+    res.json({ 
+      address,
+      balance,
+      formattedBalance: `${formattedBalance} BTM`
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Add a catch-all route to log attempted access to undefined routes
+app.use((req, res) => {
+  console.log(`Attempted to access undefined route: ${req.method} ${req.path}`);
+  res.status(404).json({ error: 'Not Found', path: req.path });
+});
+
+// Start server
+const PORT = process.env.PORT || 3001;
+const server = app.listen(PORT, async () => {
+  console.log(`API running on port ${PORT}`);
+  console.log(`Server is listening at http://localhost:${PORT}`);
+  await testConnection();
+});
+
+// Handle graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
+});
