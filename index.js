@@ -53,6 +53,24 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
+// Add BTM token info endpoint
+app.get('/token-info', async (req, res) => {
+  try {
+    // This would be replaced with actual contract interaction
+    const tokenInfo = {
+      name: "Bitmon",
+      symbol: "BTM",
+      type: "ERC20",
+      contractAddress: "0x59d6d0ADB836Ed25a3E7921ded05BF1997E82b8d",
+      decimals: 18,
+      totalSupply: "210000000"
+    };
+    res.json(tokenInfo);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Add a catch-all route to log attempted access to undefined routes
 app.use((req, res) => {
   console.log(`Attempted to access undefined route: ${req.method} ${req.path}`);
