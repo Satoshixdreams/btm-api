@@ -71,6 +71,41 @@ app.get('/token-info', async (req, res) => {
   }
 });
 
+// Add symbol endpoint
+app.get('/symbol', async (req, res) => {
+  console.log('Symbol endpoint accessed');
+  try {
+    res.json({ symbol: "BTM" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Add balance endpoint
+app.get('/balance', async (req, res) => {
+  console.log('Balance endpoint accessed');
+  try {
+    // Get address from query parameter
+    const address = req.query.address;
+    
+    if (!address) {
+      return res.status(400).json({ error: "Address parameter is required" });
+    }
+    
+    // This would be replaced with actual contract interaction to get balance
+    // For now, return a mock balance
+    const mockBalance = "1000000000000000000"; // 1 BTM with 18 decimals
+    
+    res.json({ 
+      address: address,
+      balance: mockBalance,
+      formattedBalance: "1.0 BTM"
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Add a catch-all route to log attempted access to undefined routes
 app.use((req, res) => {
   console.log(`Attempted to access undefined route: ${req.method} ${req.path}`);
