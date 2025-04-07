@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const Web3 = require('web3');
 const app = express();
 const contractUtils = require('./utils/contract');
 
