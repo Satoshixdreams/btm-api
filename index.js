@@ -99,21 +99,6 @@ app.get('/totalSupply', async (req, res) => {
   }
 });
 
-const cors = require('cors');
-// ...
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests) or from allowed origins
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-      callback(new Error(msg), false);
-    }
-  }
-};
-// Middleware
-app.use(cors(corsOptions)); // Use configured CORS options
 // Add balance endpoint
 app.get('/balance', async (req, res) => {
   console.log('Balance endpoint accessed');
