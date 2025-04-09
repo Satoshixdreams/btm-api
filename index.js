@@ -110,6 +110,8 @@ app.get('/balance', async (req, res) => {
       return res.status(400).json({ error: "Address parameter is required" });
     }
     
+    console.log(`Fetching balance for address: ${address}`);
+    
     const balance = await contractUtils.getTokenBalance(address);
     const decimals = await contractUtils.getTokenDecimals();
     
