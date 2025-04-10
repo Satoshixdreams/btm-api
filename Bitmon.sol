@@ -9,6 +9,10 @@ import "@openzeppelin/contracts@4.9.0/token/ERC20/extensions/ERC20Permit.sol";
 import "@openzeppelin/contracts@4.9.0/token/ERC20/extensions/ERC20Snapshot.sol";
 import "@openzeppelin/contracts@4.9.0/access/Ownable.sol";
 
+/**
+ * @title Bitmon Token
+ * @dev Implementation of the Bitmon Token with fee mechanism, blacklisting, and snapshot capabilities
+ */
 contract Bitmon is ERC20, ERC20Burnable, ERC20Pausable, ERC20Snapshot, Ownable, ERC20Permit {
     uint256 private immutable MAX_SUPPLY; // الحد الأقصى للعرض
     uint256 public constant FEE_PERCENTAGE = 1; // رسوم التحويل (1%)
@@ -87,15 +91,26 @@ contract Bitmon is ERC20, ERC20Burnable, ERC20Pausable, ERC20Snapshot, Ownable, 
         require(!blacklist[to], "Recipient is blacklisted");
 
         super._beforeTokenTransfer(from, to, amount);
+    }
 
+    // تنفيذ عملية التحويل مع تطبيق الرسوم
+    function _transfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal override {
         if (from != address(0) && to != address(0)) { // لا تفرض رسوم عند الإصدار أو الحرق
             uint256 fee = (amount * FEE_PERCENTAGE) / 100; // حساب الرسوم (1%)
             uint256 amountAfterFee = amount - fee;
 
             if (fee > 0) {
-                _transfer(from, owner(), fee); // إرسال الرسوم إلى المالك
-                _transfer(from, to, amountAfterFee); // تحويل المبلغ بعد خصم الرسوم
+                super._transfer(from, owner(), fee); // إرسال الرسوم إلى المالك
+                super._transfer(from, to, amountAfterFee); // تحويل المبلغ بعد خصم الرسوم
+            } else {
+                super._transfer(from, to, amount);
             }
+        } else {
+            super._transfer(from, to, amount);
         }
     }
 
