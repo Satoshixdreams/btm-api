@@ -9,3 +9,18 @@ services:
         value: https://testnet-rpc.monad.xyz
       - key: PORT
         value: 3001
+
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors'); // استيراد الحزمة
+const Web3 = require('web3');
+const app = express();
+const contractUtils = require('./utils/contract');
+
+// Middleware
+app.use(cors({
+  origin: 'https://your-game-domain.com', // استبدل هذا بنطاق لعبتك
+  methods: ['GET', 'POST'], // السماح فقط بطرق معينة
+  credentials: true // إذا كنت تستخدم ملفات تعريف الارتباط
+}));
+app.use(express.json());

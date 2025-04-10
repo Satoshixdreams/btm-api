@@ -13,6 +13,7 @@
   "license": "ISC",
   "description": "A simple API to interact with the BTM smart contract on Monad Testnet",
   "dependencies": {
+    "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "web3": "^1.10.0"
