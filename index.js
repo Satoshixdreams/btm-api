@@ -1,11 +1,13 @@
 require('dotenv').config();
 const express = require('express');
 const Web3 = require('web3');
+const cors = require('cors'); // Import CORS
 const app = express();
 const contractUtils = require('./utils/contract');
 
 // Middleware
 app.use(express.json());
+app.use(cors()); // Enable CORS for all routes
 
 // Test connection to Monad Testnet
 async function testConnection() {
@@ -107,6 +109,8 @@ app.get('/balance', async (req, res) => {
     if (!address) {
       return res.status(400).json({ error: "Address parameter is required" });
     }
+    
+    console.log(`Fetching balance for address: ${address}`);
     
     const balance = await contractUtils.getTokenBalance(address);
     const decimals = await contractUtils.getTokenDecimals();
