@@ -276,6 +276,7 @@ process.on('SIGTERM', () => {
     process.exit(0);
   });
 });
+<<<<<<< HEAD
 
 // Database mock - in production, use a real database
 const playerPointsDB = {};
@@ -441,3 +442,5 @@ app.post('/claim-rewards', async (req, res) => {
     });
   }
 });
+=======
+>>>>>>> 99fcf857fff5ae1b99066ea0823c67d1facf67e4
