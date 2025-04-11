@@ -59,6 +59,39 @@ async function getTokenBalance(address) {
   }
 }
 
+async function transferTokens(fromPrivateKey, toAddress, amount) {
+  try {
+    // Create account from private key
+    const account = web3.eth.accounts.privateKeyToAccount(fromPrivateKey);
+    web3.eth.accounts.wallet.add(account);
+    
+    // Get gas price and estimate gas
+    const gasPrice = await web3.eth.getGasPrice();
+    const gasEstimate = await tokenContract.methods.transfer(toAddress, amount).estimateGas({ from: account.address });
+    
+    // Send transaction
+    const receipt = await tokenContract.methods.transfer(toAddress, amount).send({
+      from: account.address,
+      gas: Math.round(gasEstimate * 1.2), // Add 20% buffer
+      gasPrice
+    });
+    
+    // Remove account from wallet for security
+    web3.eth.accounts.wallet.remove(account.address);
+    
+    return {
+      success: true,
+      transactionHash: receipt.transactionHash
+    };
+  } catch (error) {
+    console.error('Error transferring tokens:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
 module.exports = {
   web3,
   tokenContract,
@@ -66,5 +99,6 @@ module.exports = {
   getTokenSymbol,
   getTokenDecimals,
   getTokenTotalSupply,
-  getTokenBalance
+  getTokenBalance,
+  transferTokens  // Add this new function to exports
 };
