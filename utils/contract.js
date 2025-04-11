@@ -61,8 +61,18 @@ async function getTokenBalance(address) {
 
 async function transferTokens(fromPrivateKey, toAddress, amount) {
   try {
+    // Use provided private key or fall back to environment variable
+    const privateKey = fromPrivateKey || process.env.REWARDS_WALLET_PRIVATE_KEY;
+    
+    if (!privateKey) {
+      throw new Error("No private key provided");
+    }
+    
+    // Ensure private key has correct format (add 0x prefix if missing)
+    const formattedKey = privateKey.startsWith('0x') ? privateKey : `0x${privateKey}`;
+    
     // Create account from private key
-    const account = web3.eth.accounts.privateKeyToAccount(fromPrivateKey);
+    const account = web3.eth.accounts.privateKeyToAccount(formattedKey);
     web3.eth.accounts.wallet.add(account);
     
     console.log(`Preparing to transfer ${web3.utils.fromWei(amount, 'ether')} BTM from ${account.address} to ${toAddress}`);
