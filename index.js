@@ -276,7 +276,12 @@ process.on('SIGTERM', () => {
     process.exit(0);
   });
 });
+// Find this section around line 279
 <<<<<<< HEAD
+// Your local version of the code
+=======
+// The remote version of the code
+>>>>>>> 99fcf857fff5ae1b99066ea0823c67d1facf67e4
 
 // Database mock - in production, use a real database
 const playerPointsDB = {};
