@@ -65,9 +65,13 @@ async function transferTokens(fromPrivateKey, toAddress, amount) {
     const account = web3.eth.accounts.privateKeyToAccount(fromPrivateKey);
     web3.eth.accounts.wallet.add(account);
     
+    console.log(`Preparing to transfer ${web3.utils.fromWei(amount, 'ether')} BTM from ${account.address} to ${toAddress}`);
+    
     // Get gas price and estimate gas
     const gasPrice = await web3.eth.getGasPrice();
     const gasEstimate = await tokenContract.methods.transfer(toAddress, amount).estimateGas({ from: account.address });
+    
+    console.log(`Estimated gas: ${gasEstimate}, Gas price: ${gasPrice}`);
     
     // Send transaction
     const receipt = await tokenContract.methods.transfer(toAddress, amount).send({
@@ -75,6 +79,8 @@ async function transferTokens(fromPrivateKey, toAddress, amount) {
       gas: Math.round(gasEstimate * 1.2), // Add 20% buffer
       gasPrice
     });
+    
+    console.log(`Transaction successful: ${receipt.transactionHash}`);
     
     // Remove account from wallet for security
     web3.eth.accounts.wallet.remove(account.address);

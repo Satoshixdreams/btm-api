@@ -276,3 +276,168 @@ process.on('SIGTERM', () => {
     process.exit(0);
   });
 });
+
+// Database mock - in production, use a real database
+const playerPointsDB = {};
+
+// Add points endpoint
+app.post('/add-points', async (req, res) => {
+  console.log('Add points endpoint accessed');
+  try {
+    const { playerAddress, pointsToAdd } = req.body;
+    
+    if (!playerAddress || !pointsToAdd) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Player address and points are required" 
+      });
+    }
+    
+    // Validate Ethereum address format
+    if (!contractUtils.web3.utils.isAddress(playerAddress)) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Invalid Ethereum address format" 
+      });
+    }
+    
+    // Validate points
+    if (isNaN(pointsToAdd) || pointsToAdd <= 0) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Points must be a positive number" 
+      });
+    }
+    
+    console.log(`Adding ${pointsToAdd} points for address: ${playerAddress}`);
+    
+    // Get current points (or initialize to 0)
+    const currentPoints = playerPointsDB[playerAddress] || 0;
+    
+    // Add points
+    playerPointsDB[playerAddress] = currentPoints + parseInt(pointsToAdd);
+    
+    res.json({ 
+      success: true, 
+      newTotalPoints: playerPointsDB[playerAddress]
+    });
+  } catch (error) {
+    console.error('Error adding points:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message || "Failed to add points" 
+    });
+  }
+});
+
+// Get points endpoint
+app.get('/get-points/:address', async (req, res) => {
+  console.log('Get points endpoint accessed');
+  try {
+    const address = req.params.address;
+    
+    // Validate Ethereum address format
+    if (!contractUtils.web3.utils.isAddress(address)) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Invalid Ethereum address format" 
+      });
+    }
+    
+    console.log(`Fetching points for address: ${address}`);
+    
+    // Get current points (or return 0)
+    const points = playerPointsDB[address] || 0;
+    
+    res.json({ 
+      success: true, 
+      points
+    });
+  } catch (error) {
+    console.error('Error getting points:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message || "Failed to get points" 
+    });
+  }
+});
+
+// Claim rewards endpoint
+app.post('/claim-rewards', async (req, res) => {
+  console.log('Claim rewards endpoint accessed');
+  try {
+    const { playerAddress } = req.body;
+    
+    if (!playerAddress) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Player address is required" 
+      });
+    }
+    
+    // Validate Ethereum address format
+    if (!contractUtils.web3.utils.isAddress(playerAddress)) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Invalid Ethereum address format" 
+      });
+    }
+    
+    console.log(`Processing reward claim for address: ${playerAddress}`);
+    
+    // Get current points
+    const currentPoints = playerPointsDB[playerAddress] || 0;
+    
+    // Check if player has enough points (5000 points = 1 BTM)
+    if (currentPoints < 5000) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Insufficient points. 5000 points required for 1 BTM." 
+      });
+    }
+    
+    // Calculate BTM amount
+    const btmAmount = Math.floor(currentPoints / 5000);
+    const btmAmountWei = contractUtils.web3.utils.toWei(btmAmount.toString(), 'ether');
+    
+    console.log(`Converting ${currentPoints} points to ${btmAmount} BTM for ${playerAddress}`);
+    
+    try {
+      // Get private key from environment variable
+      const privateKey = process.env.REWARDS_WALLET_PRIVATE_KEY;
+      
+      if (!privateKey) {
+        throw new Error("Rewards wallet private key not configured");
+      }
+      
+      // Transfer BTM tokens to player
+      const txResult = await contractUtils.transferTokens(privateKey, playerAddress, btmAmountWei);
+      
+      if (txResult.success) {
+        // Reset player points to 0
+        playerPointsDB[playerAddress] = 0;
+        
+        res.json({ 
+          success: true, 
+          message: "Claim successful!", 
+          claimedAmountBTM: btmAmount,
+          transactionHash: txResult.transactionHash
+        });
+      } else {
+        throw new Error(txResult.error || "Token transfer failed");
+      }
+    } catch (transferError) {
+      console.error('Error transferring tokens:', transferError);
+      return res.status(500).json({ 
+        success: false, 
+        error: "Failed to transfer tokens. Please try again later." 
+      });
+    }
+  } catch (error) {
+    console.error('Error processing reward claim:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message || "Failed to process reward claim" 
+    });
+  }
+});
