@@ -99,7 +99,7 @@ app.get('/totalSupply', async (req, res) => {
   }
 });
 
-// Add balance endpoint
+// Add balance endpoint (with query parameter)
 app.get('/balance', async (req, res) => {
   console.log('Balance endpoint accessed');
   try {
@@ -109,6 +109,31 @@ app.get('/balance', async (req, res) => {
     if (!address) {
       return res.status(400).json({ error: "Address parameter is required" });
     }
+    
+    console.log(`Fetching balance for address: ${address}`);
+    
+    const balance = await contractUtils.getTokenBalance(address);
+    const decimals = await contractUtils.getTokenDecimals();
+    
+    // Format the balance with decimals
+    const formattedBalance = contractUtils.web3.utils.fromWei(balance, 'ether');
+    
+    res.json({ 
+      address,
+      balance,
+      formattedBalance: `${formattedBalance} BTM`
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Add a new endpoint that accepts address as a path parameter
+app.get('/balance/:address', async (req, res) => {
+  console.log('Balance endpoint accessed with path parameter');
+  try {
+    // Get address from path parameter
+    const address = req.params.address;
     
     console.log(`Fetching balance for address: ${address}`);
     
