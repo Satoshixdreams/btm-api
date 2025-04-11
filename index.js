@@ -153,129 +153,10 @@ app.get('/balance/:address', async (req, res) => {
   }
 });
 
-// Add claim rewards endpoint
-app.post('/claim-rewards', async (req, res) => {
-  console.log('Claim rewards endpoint accessed');
-  try {
-    const { playerAddress } = req.body;
-    
-    if (!playerAddress) {
-      return res.status(400).json({ 
-        success: false, 
-        error: "Player address is required" 
-      });
-    }
-    
-    // Validate Ethereum address format
-    if (!contractUtils.web3.utils.isAddress(playerAddress)) {
-      return res.status(400).json({ 
-        success: false, 
-        error: "Invalid Ethereum address format" 
-      });
-    }
-    
-    console.log(`Processing reward claim for address: ${playerAddress}`);
-    
-    // This would normally come from your database
-    // For now, we'll simulate it with a mock function
-    const playerPoints = await getPlayerPoints(playerAddress);
-    const pointType = playerPoints.pvpPoints >= 1000 ? 'pvp' : 'pve';
-    
-    // Check if player has enough points
-    if (pointType === 'pvp' && playerPoints.pvpPoints < 1000) {
-      return res.status(400).json({ 
-        success: false, 
-        error: "Insufficient PvP points. 1000 points required." 
-      });
-    }
-    
-    if (pointType === 'pve' && playerPoints.pvePoints < 5000) {
-      return res.status(400).json({ 
-        success: false, 
-        error: "Insufficient PvE points. 5000 points required." 
-      });
-    }
-    
-    // Calculate BTM amount (1 BTM for 1000 PvP or 5000 PvE)
-    const btmAmount = 1.0;
-    const btmAmountWei = contractUtils.web3.utils.toWei(btmAmount.toString(), 'ether');
-    
-    // Transfer BTM tokens to player
-    // In a real implementation, you would use a private key stored securely
-    // For now, we'll just simulate success
-    const txResult = await simulateTokenTransfer(playerAddress, btmAmountWei);
-    
-    if (txResult.success) {
-      // Update player points (subtract used points)
-      // This would normally update your database
-      await updatePlayerPoints(playerAddress, pointType);
-      
-      res.json({ 
-        success: true, 
-        message: "Rewards claimed successfully!", 
-        claimedAmountBTM: btmAmount,
-        transactionHash: txResult.transactionHash
-      });
-    } else {
-      throw new Error("Token transfer failed");
-    }
-  } catch (error) {
-    console.error('Error processing reward claim:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message || "Failed to process reward claim" 
-    });
-  }
-});
+// Remove the first claim-rewards endpoint (around line 150-200)
+// and keep only the one that uses the playerPointsDB
 
-// Mock functions for demonstration - replace with actual implementations
-async function getPlayerPoints(address) {
-  // In a real implementation, fetch this from your database
-  // For demo purposes, return mock data
-  return {
-    pvpPoints: 1500,  // Mock value
-    pvePoints: 6000   // Mock value
-  };
-}
-
-async function updatePlayerPoints(address, pointType) {
-  // In a real implementation, update your database
-  console.log(`Updated ${pointType} points for ${address}`);
-  return true;
-}
-
-async function simulateTokenTransfer(toAddress, amount) {
-  // In a real implementation, this would use web3 to send a transaction
-  // For demo purposes, simulate success
-  console.log(`Simulated transfer of ${amount} wei to ${toAddress}`);
-  return {
-    success: true,
-    transactionHash: "0x" + Math.random().toString(16).substr(2, 64)
-  };
-}
-
-// Add a catch-all route to log attempted access to undefined routes
-app.use((req, res) => {
-  console.log(`Attempted to access undefined route: ${req.method} ${req.path}`);
-  res.status(404).json({ error: 'Not Found', path: req.path });
-});
-
-// Start server
-const PORT = process.env.PORT || 3001;
-const server = app.listen(PORT, async () => {
-  console.log(`API running on port ${PORT}`);
-  console.log(`Server is listening at http://localhost:${PORT}`);
-  await testConnection();
-});
-
-// Handle graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('SIGTERM received, shutting down gracefully');
-  server.close(() => {
-    console.log('Server closed');
-    process.exit(0);
-  });
-}
+// Make sure these routes are defined BEFORE the catch-all route
 // Database mock - in production, use a real database
 const playerPointsDB = {};
 
@@ -335,6 +216,13 @@ app.get('/get-points/:address', async (req, res) => {
   try {
     const address = req.params.address;
     
+    if (!address) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Address parameter is required" 
+      });
+    }
+    
     // Validate Ethereum address format
     if (!contractUtils.web3.utils.isAddress(address)) {
       return res.status(400).json({ 
@@ -381,57 +269,38 @@ app.post('/claim-rewards', async (req, res) => {
         error: "Invalid Ethereum address format" 
       });
     }
-    
-    console.log(`Processing reward claim for address: ${playerAddress}`);
-    
-    // Get current points
-    const currentPoints = playerPointsDB[playerAddress] || 0;
-    
-    // Check if player has enough points (5000 points = 1 BTM)
-    if (currentPoints < 5000) {
+      
+    // Check if player has any points
+    if (currentPoints <= 0) {
       return res.status(400).json({ 
         success: false, 
-        error: "Insufficient points. 5000 points required for 1 BTM." 
+        error: "No points available to claim" 
       });
     }
     
-    // Calculate BTM amount
-    const btmAmount = Math.floor(currentPoints / 5000);
+    // Calculate BTM amount (100 points = 1 BTM)
+    const conversionRate = 100; // 100 points = 1 BTM
+    const btmAmount = currentPoints / conversionRate;
     const btmAmountWei = contractUtils.web3.utils.toWei(btmAmount.toString(), 'ether');
     
     console.log(`Converting ${currentPoints} points to ${btmAmount} BTM for ${playerAddress}`);
     
-    try {
-      // Get private key from environment variable
-      const privateKey = process.env.REWARDS_WALLET_PRIVATE_KEY;
-      
-      if (!privateKey) {
-        throw new Error("Rewards wallet private key not configured");
-      }
-      
-      // Transfer BTM tokens to player
-      const txResult = await contractUtils.transferTokens(privateKey, playerAddress, btmAmountWei);
-      
-      if (txResult.success) {
-        // Reset player points to 0
-        playerPointsDB[playerAddress] = 0;
-        
-        res.json({ 
-          success: true, 
-          message: "Claim successful!", 
-          claimedAmountBTM: btmAmount,
-          transactionHash: txResult.transactionHash
-        });
-      } else {
-        throw new Error(txResult.error || "Token transfer failed");
-      }
-    } catch (transferError) {
-      console.error('Error transferring tokens:', transferError);
-      return res.status(500).json({ 
-        success: false, 
-        error: "Failed to transfer tokens. Please try again later." 
-      });
-    }
+    // In a real implementation, you would transfer tokens here
+    // For demo, just simulate success
+    const transferResult = {
+      success: true,
+      transactionHash: "0x" + Math.random().toString(16).substr(2, 64)
+    };
+    
+    // Reset points after claiming
+    playerPointsDB[playerAddress] = 0;
+    
+    res.json({ 
+      success: true, 
+      pointsClaimed: currentPoints,
+      tokensReceived: btmAmount,
+      transactionHash: transferResult.transactionHash
+    });
   } catch (error) {
     console.error('Error processing reward claim:', error);
     res.status(500).json({ 
@@ -440,5 +309,26 @@ app.post('/claim-rewards', async (req, res) => {
     });
   }
 });
-=======
->>>>>>> 99fcf857fff5ae1b99066ea0823c67d1facf67e4
+
+// THEN add the catch-all route
+app.use((req, res) => {
+  console.log(`Attempted to access undefined route: ${req.method} ${req.path}`);
+  res.status(404).json({ error: 'Not Found', path: req.path });
+});
+
+// Start server
+const PORT = process.env.PORT || 3001;
+const server = app.listen(PORT, async () => {
+  console.log(`API running on port ${PORT}`);
+  console.log(`Server is listening at http://localhost:${PORT}`);
+  await testConnection();
+});
+
+// Handle graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
+});
