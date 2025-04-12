@@ -269,9 +269,12 @@ app.post('/claim-rewards', async (req, res) => {
         error: "Invalid Ethereum address format" 
       });
     }
+<<<<<<< HEAD
     
     // Get current points - THIS LINE WAS MISSING
     const currentPoints = playerPointsDB[playerAddress] || 0;
+=======
+>>>>>>> 7d5ea630d12ddcc0359bc32a3f4a1dc114f04dba
       
     // Check if player has any points
     if (currentPoints <= 0) {
