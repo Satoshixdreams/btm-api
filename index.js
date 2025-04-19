@@ -5,9 +5,87 @@ const cors = require('cors'); // Import CORS
 const app = express();
 const contractUtils = require('./utils/contract');
 
-// Middleware
+// نقل هذين السطرين إلى هنا (قبل تعريف المسارات)
 app.use(express.json());
 app.use(cors()); // Enable CORS for all routes
+
+// ثم تأتي المسارات بعد ذلك
+// Reward endpoint - sends BTM tokens to players
+app.post('/reward', async (req, res) => {
+  console.log('Reward endpoint accessed');
+  try {
+    const { address, amount } = req.body;
+    
+    console.log(`Received reward request: Address=${address}, Amount=${amount}`);
+    
+    // تحقق من وجود العنوان والمبلغ
+    if (!address || !amount) {
+      console.log('Missing required parameters');
+      return res.status(400).json({ 
+        success: false, 
+        message: 'يجب تحديد العنوان والمبلغ' 
+      });
+    }
+    
+    // تحقق من صحة العنوان
+    if (!contractUtils.web3.utils.isAddress(address)) {
+      console.log('Invalid Ethereum address');
+      return res.status(400).json({ 
+        success: false, 
+        message: 'عنوان محفظة غير صالح' 
+      });
+    }
+    
+    // تحويل المبلغ إلى wei
+    const amountInWei = contractUtils.web3.utils.toWei(amount.toString(), 'ether');
+    console.log(`Attempting to transfer ${amount} BTM (${amountInWei} wei) to ${address}`);
+    
+    // استخدام وظيفة transferTokens من contract utilities
+    const transferResult = await contractUtils.transferTokens(
+      null, // استخدام المفتاح الخاص من متغيرات البيئة
+      address,
+      amountInWei
+    );
+    
+    // معالجة نتيجة التحويل
+    if (transferResult.success) {
+      console.log(`Transfer successful! Transaction hash: ${transferResult.transactionHash}`);
+      
+      // إرجاع استجابة نجاح
+      res.json({ 
+        success: true, 
+        message: `تم إرسال ${amount} BTM بنجاح`,
+        txHash: transferResult.transactionHash 
+      });
+    } else {
+      // إذا فشل التحويل الحقيقي، تحقق إذا كانت المحاكاة مسموحة
+      console.error(`Transfer failed: ${transferResult.error}`);
+      
+      if (process.env.NODE_ENV === 'development' || process.env.ALLOW_SIMULATED_REWARDS === 'true') {
+        console.log('Falling back to simulated reward');
+        
+        // محاكاة نجاح العملية
+        res.json({ 
+          success: true, 
+          message: `تم منح ${amount} BTM كمكافأة (محاكاة)`,
+          txHash: '0x' + Math.random().toString(16).substr(2, 64),
+          simulated: true
+        });
+      } else {
+        // إرجاع خطأ إذا لم تكن المحاكاة مسموحة
+        throw new Error(transferResult.error || 'فشل التحويل لسبب غير معروف');
+      }
+    }
+  } catch (error) {
+    // معالجة أي أخطاء أخرى
+    console.error('Error processing reward:', error);
+    
+    res.status(500).json({ 
+      success: false, 
+      message: `فشل إرسال المكافأة: ${error.message}` 
+    });
+  }
+});
 
 // Test connection to Monad Testnet
 async function testConnection() {
@@ -153,9 +231,6 @@ app.get('/balance/:address', async (req, res) => {
   }
 });
 
-// Remove the first claim-rewards endpoint (around line 150-200)
-// and keep only the one that uses the playerPointsDB
-
 // Make sure these routes are defined BEFORE the catch-all route
 // Database mock - in production, use a real database
 const playerPointsDB = {};
@@ -270,6 +345,8 @@ app.post('/claim-rewards', async (req, res) => {
       });
     }
    
+    const currentPoints = playerPointsDB[playerAddress] || 0;
+    
     // Check if player has any points
     if (currentPoints <= 0) {
       return res.status(400).json({ 
